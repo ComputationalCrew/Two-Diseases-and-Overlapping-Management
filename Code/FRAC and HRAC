@@ -1,0 +1,207 @@
+# Loading library
+library(magrittr) # needs to be run every time you start R and want to use %>%
+library(dplyr)    # alternatively, this also loads %>%
+library(ggplot2)
+library(psych)
+library(corrr)
+library(tidyverse)
+library(gridExtra)
+library(rsample)   # data splitting
+library(ggplot2)   # allows extension of visualizations
+library(dplyr)     # basic data transformation
+library(stargazer) #We have to library the package every time we use
+library(skimr)
+library(CBPS)
+library(lattice)
+library(MASS)
+require(pscl) # alternatively can use package ZIM for zero-inflated models
+library(lmtest)
+library(PSweight)
+library(magrittr) # needs to be run every time you start R and want to use %>%
+library(reshape) # load the reshape package from Hadley -- he has created GREAT packages
+library("pheatmap")
+library(factoextra)
+library(NbClust)
+
+df <- read.csv(".../2014 to 2017 Oregon Pesticide Use Record Database_04132026_descriptive_FRAC_v3.csv", check.names=FALSE)
+
+df$MOA11 <- as.numeric(df$MOA11)
+df$MOA11_27 <- as.numeric(df$MOA11_27)
+df$MOA13 <- as.numeric(df$MOA13)
+df$MOA14 <- as.numeric(df$MOA14)
+df$MOA21 <- as.numeric(df$MOA21)
+df$MOA22 <- as.numeric(df$MOA22)
+df$MOA27 <- as.numeric(df$MOA27)
+df$MOA3 <- as.numeric(df$MOA3)
+df$MOA4 <- as.numeric(df$MOA4)
+df$MOA40 <- as.numeric(df$MOA40)
+df$MOA40_45 <- as.numeric(df$MOA40_45)
+df$MOA5 <- as.numeric(df$MOA5)
+df$MOA50 <- as.numeric(df$MOA50)
+df$MOA7 <- as.numeric(df$MOA7)
+df$MOA7_11 <- as.numeric(df$MOA7_11)
+df$M02 <- as.numeric(df$M02)
+df$M1 <- as.numeric(df$M1)
+df$M4 <- as.numeric(df$M4)
+df$NC <- as.numeric(df$NC)
+df$P05 <- as.numeric(df$P05)
+df$P07 <- as.numeric(df$P07)
+str(df)
+
+
+##### 3
+df %>%                               # Summary by group using dplyr
+  group_by(Grower) %>% 
+  summarize(min = min(MOA3),
+            mean = mean(MOA3),
+            max = max(MOA3))
+
+##### 4
+df %>%                               # Summary by group using dplyr
+  group_by(Grower) %>% 
+  summarize(min = min(MOA4),
+            mean = mean(MOA4),
+            max = max(MOA4))
+
+
+##### 5
+df %>%                               # Summary by group using dplyr
+  group_by(Grower) %>% 
+  summarize(min = min(MOA5),
+            mean = mean(MOA5),
+            max = max(MOA5))
+
+
+##### 7
+df %>%                               # Summary by group using dplyr
+  group_by(Grower) %>% 
+  summarize(min = min(MOA7),
+            mean = mean(MOA7),
+            max = max(MOA7))
+
+
+##### 11
+df %>%                               # Summary by group using dplyr
+  group_by(Grower) %>% 
+  summarize(min = min(MOA11),
+            mean = mean(MOA11),
+            max = max(MOA11))
+
+
+
+##### 13
+df %>%                               # Summary by group using dplyr
+  group_by(Grower) %>% 
+  summarize(min = min(MOA13),
+            mean = mean(MOA13),
+            max = max(MOA13))
+
+##### 14
+df %>%                               # Summary by group using dplyr
+  group_by(Grower) %>% 
+  summarize(min = min(MOA14),
+            mean = mean(MOA14),
+            max = max(MOA14))
+
+##### 21
+df %>%                               # Summary by group using dplyr
+  group_by(Grower) %>% 
+  summarize(min = min(MOA21),
+            mean = mean(MOA21),
+            max = max(MOA21))
+
+##### 22
+df %>%                               # Summary by group using dplyr
+  group_by(Grower) %>% 
+  summarize(min = min(MOA22),
+            mean = mean(MOA22),
+            max = max(MOA22))
+
+##### 27
+df %>%                               # Summary by group using dplyr
+  group_by(Grower) %>% 
+  summarize(min = min(MOA27),
+            mean = mean(MOA27),
+            max = max(MOA27))
+
+##### 40
+df %>%                               # Summary by group using dplyr
+  group_by(Grower) %>% 
+  summarize(min = min(MOA40),
+            mean = mean(MOA40),
+            max = max(MOA40))
+
+
+##### 50
+df %>%                               # Summary by group using dplyr
+  group_by(Grower) %>% 
+  summarize(min = min(MOA50),
+            mean = mean(MOA50),
+            max = max(MOA50))
+
+
+##### 7 + 11
+df %>%                               # Summary by group using dplyr
+  group_by(Grower) %>% 
+  summarize(min = min(MOA7_11),
+            mean = mean(MOA7_11),
+            max = max(MOA7_11))
+
+
+##### 11 + 27
+df %>%                               # Summary by group using dplyr
+  group_by(Grower) %>% 
+  summarize(min = min(MOA11_27),
+            mean = mean(MOA11_27),
+            max = max(MOA11_27))
+
+##### 40 + 45
+df %>%                               # Summary by group using dplyr
+  group_by(Grower) %>% 
+  summarize(min = min(MOA40_45),
+            mean = mean(MOA40_45),
+            max = max(MOA40_45))
+
+
+##### M1
+df %>%                               # Summary by group using dplyr
+  group_by(Grower) %>% 
+  summarize(min = min(M1),
+            mean = mean(M1),
+            max = max(M1))
+
+
+##### M02
+df %>%                               # Summary by group using dplyr
+  group_by(Grower) %>% 
+  summarize(min = min(M02),
+            mean = mean(M02),
+            max = max(M02))
+
+##### M4
+df %>%                               # Summary by group using dplyr
+  group_by(Grower) %>% 
+  summarize(min = min(M4),
+            mean = mean(M4),
+            max = max(M4))
+
+##### NC
+df %>%                               # Summary by group using dplyr
+  group_by(Grower) %>% 
+  summarize(min = min(NC),
+            mean = mean(NC),
+            max = max(NC))
+
+##### P05
+df %>%                               # Summary by group using dplyr
+  group_by(Grower) %>% 
+  summarize(min = min(P05),
+            mean = mean(P05),
+            max = max(P05))
+
+##### P07
+df %>%                               # Summary by group using dplyr
+  group_by(Grower) %>% 
+  summarize(min = min(P07),
+            mean = mean(P07),
+            max = max(P07))
