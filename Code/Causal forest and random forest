@@ -1,0 +1,361 @@
+library(grf)
+library(ggplot2)
+library(dplyr)
+library(reshape2)
+library(magrittr) # needs to be run every time you start R and want to use %>%
+library(dplyr)    # alternatively, this also loads %>%
+library(ggplot2)
+library(psych)
+library(corrr)
+library(tidyverse)
+library(gridExtra)
+library(rsample)   # data splitting
+library(ggplot2)   # allows extension of visualizations
+library(dplyr)     # basic data transformation
+library(stargazer) #We have to library the package every time we use
+library(skimr)
+library(CBPS)
+library(lattice)
+library(MASS)
+require(pscl) # alternatively can use package ZIM for zero-inflated models
+library(lmtest)
+library(PSweight)
+library(magrittr) # needs to be run every time you start R and want to use %>%
+library(reshape) # load the reshape package from Hadley -- he has created GREAT packages
+library("pheatmap")
+library(factoextra)
+library(NbClust)
+library(caret)
+library(randomForest)
+library(e1071)
+library(readr)
+library(dplyr)
+library(iml)
+library(caret)
+
+df <- read.csv(".../2014 to 2017 Oregon Pesticide Use Record Database_04132026_v10.csv", check.names=FALSE)
+
+
+# remove 2018 year
+df <- df %>%
+  filter(!Year %in% c("2018"))
+
+# Only use fungicide
+df_fun_her <- subset(df, Type == "Fungicide")
+
+
+# remove the following active ingredients
+df_fun_her <- df_fun_her %>%
+  filter(!Active %in% c("Clethodim", "Clopyralid","Dimethenamid-P",
+                        "Glyphosate", "Pendimethalin","Norflurazon"))
+
+df_fun_her$formatted_name <- sprintf("%s%s", df_fun_her$Year, df_fun_her$`Field ID`)
+
+# remove no lattitude and longitude
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "20148"), ]
+
+# remove no pruning information
+df_fun_her <- df_fun_her[!(df_fun_her$Pruning == "."), ]
+
+# Specify the column to one-hot encode (Powdery)
+target_col <- "Powdery"
+
+# Ensure the column is a factor
+df_fun_her[[target_col]] <- as.factor(df_fun_her[[target_col]])
+
+# Perform one-hot encoding for the specific column
+one_hot <- model.matrix(~ . - 1, data = df_fun_her[target_col]) %>% as.data.frame()
+
+df_fun_her <- cbind(df_fun_her, one_hot)
+
+
+# Specify the column to one-hot encode (Powdery)
+target_col <- "Downy"
+
+# Ensure the column is a factor
+df_fun_her[[target_col]] <- as.factor(df_fun_her[[target_col]])
+
+# Perform one-hot encoding for the specific column
+one_hot <- model.matrix(~ . - 1, data = df_fun_her[target_col]) %>% as.data.frame()
+
+df_fun_her <- cbind(df_fun_her, one_hot)
+
+# Specify the column to one-hot encode (Both)
+target_col <- "Both"
+
+# Ensure the column is a factor
+df_fun_her[[target_col]] <- as.factor(df_fun_her[[target_col]])
+
+# Perform one-hot encoding for the specific column
+one_hot <- model.matrix(~ . - 1, data = df_fun_her[target_col]) %>% as.data.frame()
+
+df_fun_her <- cbind(df_fun_her, one_hot)
+
+# No information on weighted degree centrality
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "201424"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "201440"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "201480"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "201521"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "201553"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "201554"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "201625"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "201657"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "201658"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "201659"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "201671"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "201672"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "201674"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "201675"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "201783"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "201785"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "2016103"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "2016109"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "2016111"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "2016118"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "2017104"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "2017109"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "2017110"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "2017113"), ]
+
+# Downy_mildew_susceptibility >= 3 , 1, 0 dummy
+df_fun_her$Downy_mildew_susceptibility <- ifelse(df_fun_her$Downy_mildew_susceptibility >= 3, "1", "0")
+
+# Specify the column to one-hot encode
+target_col <- "Quadrant"
+
+# Ensure the column is a factor
+df_fun_her[[target_col]] <- as.factor(df_fun_her[[target_col]])
+
+# Perform one-hot encoding for the specific column
+one_hot <- model.matrix(~ . - 1, data = df_fun_her[target_col]) %>% as.data.frame()
+
+df_fun_her <- cbind(df_fun_her, one_hot)
+
+
+df_cf <- subset(df_fun_her, select=c('Susceptibility_to_V6_Strains','Susceptibility_to_non_V6_Strains',
+                                     'Initial_strain','Pruning',
+                                     'Downy_mildew_susceptibility',
+                                     'Annual_costs_for_both','Active_ingredients_for_both',
+                                     'Annual_costs_for_powdery_only_both','Active_ingredients_for_powdery_only_both',
+                                     'QuadrantNE','QuadrantNW','QuadrantSE','QuadrantSW',
+                                     'Group','Powdery_mildew_incidence_April',
+                                     'Powdery_mildew_incidence_May','Powdery_mildew_incidence_June',
+                                     'Powdery_mildew_incidence_July',
+                                     'Seasonal_powdery_mildew_incidence'))
+
+df_cf$Susceptibility_to_V6_Strains <- as.numeric(df_cf$Susceptibility_to_V6_Strains)
+df_cf$Susceptibility_to_non_V6_Strains <- as.numeric(df_cf$Susceptibility_to_non_V6_Strains)
+df_cf$Initial_strain <- as.numeric(df_cf$Initial_strain)
+df_cf$Pruning <- as.numeric(df_cf$Pruning)
+df_cf$Downy_mildew_susceptibility <- as.numeric(df_cf$Downy_mildew_susceptibility)
+df_cf$QuadrantNE <- as.numeric(df_cf$QuadrantNE)
+df_cf$QuadrantNW <- as.numeric(df_cf$QuadrantNW)
+df_cf$QuadrantSE <- as.numeric(df_cf$QuadrantSE)
+df_cf$QuadrantSW <- as.numeric(df_cf$QuadrantSW)
+df_cf$Group <- as.numeric(df_cf$Group)
+df_cf$Powdery_mildew_incidence_April <- as.numeric(df_cf$Powdery_mildew_incidence_April)
+df_cf$Powdery_mildew_incidence_May <- as.numeric(df_cf$Powdery_mildew_incidence_May)
+df_cf$Powdery_mildew_incidence_June <- as.numeric(df_cf$Powdery_mildew_incidence_June)
+df_cf$Powdery_mildew_incidence_July <- as.numeric(df_cf$Powdery_mildew_incidence_July)
+df_cf$Seasonal_powdery_mildew_incidence <- as.numeric(df_cf$Seasonal_powdery_mildew_incidence)
+df_cf$Annual_costs_for_both <- as.numeric(df_cf$Annual_costs_for_both)
+df_cf$Active_ingredients_for_both <- as.numeric(df_cf$Active_ingredients_for_both)
+df_cf$Annual_costs_for_powdery_only_both <- as.numeric(df_cf$Annual_costs_for_powdery_only_both)
+df_cf$Active_ingredients_for_powdery_only_both <- as.numeric(df_cf$Active_ingredients_for_powdery_only_both)
+
+# Combine covariates into matrix
+X <- cbind(df_cf$Susceptibility_to_V6_Strains, df_cf$Susceptibility_to_non_V6_Strains, 
+           df_cf$Initial_strain, df_cf$Pruning, 
+           df_cf$Active_ingredients_for_both,
+           df_cf$QuadrantNE, df_cf$QuadrantNW, df_cf$QuadrantSE, df_cf$QuadrantSW,
+           df_cf$Group, df_cf$Powdery_mildew_incidence_April,
+           df_cf$Powdery_mildew_incidence_May, df_cf$Powdery_mildew_incidence_June,
+           df_cf$Powdery_mildew_incidence_July,
+           df_cf$Seasonal_powdery_mildew_incidence)
+
+colnames(X) <- c("Susceptibility_to_V6_Strains", "Susceptibility_to_non-V6_Strains", 
+                 "Initial_strain","Pruning",
+                 "Active_ingredients_for_both",
+                 "Quadrant_NE","Quadrant_NW",
+                 "Quadrant_SE", "Quadrant_SW",
+                 "Group", "Powdery_mildew_incidence_April",
+                 "Powdery_mildew_incidence_May", "Powdery_mildew_incidence_June",
+                 "Powdery_mildew_incidence_July",
+                 "Seasonal_powdery_mildew_incidence")
+
+W <- df_cf$Downy_mildew_susceptibility
+
+Y <- df_cf$Annual_costs_for_powdery_only_both
+
+# if outcome is active ingredients
+Y <- df_cf$Active_ingredients_for_powdery_only_both
+
+# Create dataset
+data <- data.frame(X, W = W, Y = Y)
+
+# Fit causal forest with optimal hyperparameters
+cf <- causal_forest(X, Y, W,
+                    num.trees = 2000,        # Sufficient for stable estimates
+                    honesty = TRUE,          # Enable honest inference
+                    honesty.fraction = 0.5,  # Split sample equally
+                    ci.group.size = 2)       # Individual confidence intervals
+
+# Generate predictions and uncertainty estimates
+tau_hat <- predict(cf)$predictions
+tau_se <- sqrt(predict(cf, estimate.variance = TRUE)$variance.estimates)
+
+# Construct confidence intervals
+tau_lower <- tau_hat - 1.96 * tau_se
+tau_upper <- tau_hat + 1.96 * tau_se
+
+cat("Causal Forest Performance:\n")
+
+cat("Mean predicted effect:", round(mean(tau_hat), 3), "\n")
+
+cat("SD of predicted effects:", round(sd(tau_hat), 3), "\n")
+
+cat("Mean confidence interval width:", round(mean(tau_upper - tau_lower), 3), "\n")
+
+# Analyze what drives treatment effect heterogeneity
+var_importance <- variable_importance(cf)
+importance_df <- data.frame(
+  Variable = colnames(X),
+  Importance = var_importance
+) %>%
+  arrange(desc(Importance))
+
+cat("\nVariable Importance Rankings:\n")
+
+for(i in 1:nrow(importance_df)) {
+  cat(sprintf("%d. %s: %.3f\n", i, importance_df$Variable[i], importance_df$Importance[i]))
+}
+
+# Visualize importance (Supplementary Fig. 2)
+png("importance.png",width=15,height=12,units="cm" , res = 1000)
+ggplot(importance_df, aes(x = reorder(Variable, Importance), y = Importance)) +
+  geom_col(fill = "steelblue", alpha = 0.8) +
+  coord_flip() +
+  labs(title = "Variable Importance for Treatment Effect Heterogeneity",
+       x = "Predictors", 
+       y = "Importance Score") +
+  theme_classic() + ylim(0, 0.5) +
+  theme(plot.title = element_text(size = 10, face = "bold"))
+dev.off()
+
+
+# Test average treatment effect (Table 4)
+ate <- average_treatment_effect(cf, target.sample = "overlap")
+cat("\nAverage Treatment Effect Analysis:\n")
+cat("ATE estimate:", round(ate["estimate"], 3), "\n")
+cat("Standard error:", round(ate["std.err"], 3), "\n")
+cat("95% CI: [", round(ate["estimate"] - 1.96 * ate["std.err"], 3),
+    ",", round(ate["estimate"] + 1.96 * ate["std.err"], 3), "]\n")
+
+
+# Random forests
+
+# Remove the 'W' column
+colnames(data)[colnames(data) == "W"] <- "Downy_mildew_susceptibility"
+
+
+# Splitting data in train and test data
+library(caTools)
+sample <- sample(c(TRUE, FALSE), nrow(data), replace=TRUE, prob=c(0.9,0.1))
+train  <- data[sample, ]
+test   <- data[!sample, ]
+
+
+library(randomForest)
+# best parameter
+# https://www.listendata.com/2014/11/random-forest-with-r.html
+
+mtry <- tuneRF(train[-1],train$Y, ntreeTry=500,
+               stepFactor=1.5,improve=0.01, trace=TRUE, plot=TRUE)
+best.m <- mtry[mtry[, 2] == min(mtry[, 2]), 1]
+
+print(mtry)
+print(best.m)
+
+set.seed(123)
+
+rf_model  <-randomForest(Y ~ ., data = train, mtry=best.m, importance=TRUE,ntree=500)
+
+
+########
+X <- data[which(names(data) != "Y")]
+predictor <- Predictor$new(rf_model, data = X, y = data$Y)
+
+imp <- FeatureImp$new(predictor, loss = "mae")
+
+imp.dat <- imp$results
+
+# Figure 4A and 4B
+png("variable importance_rf.png",width=20,height=16,units="cm" , res = 1000)
+ggplot(imp.dat, aes(y=reorder(feature, importance), x=importance)) +
+  geom_bar(stat='identity', fill = 4) + 
+  theme_classic() + scale_x_continuous(limits=c(0, 17)) +
+  labs(x = "Permutation variable importance", y = "Variable", tag = "") +
+  theme(axis.text = element_text(size = 14),
+        axis.title = element_text(size = 16))
+dev.off()
+
+
+###
+library(ranger)
+library(kernelshap)
+library(shapviz)
+
+s1 <- kernelshap(rf_model, train[-17], bg_X = test)
+sv1 <- shapviz(s1)
+
+# Figure 4C and 4D
+png(file = "shap_rf.png", width=20,height=16,units="cm" , res = 1000)
+sv_importance(sv1, show_numbers = TRUE, sort_features = TRUE, 
+              max_display = 28L, kind = "beeswarm") +
+  theme_classic()
+dev.off()
+
+# Figure 5
+png(file = "partial_change.png", width=15,height=15,units="cm" , res = 1000)
+sv_dependence(sv1, v = "Downy_mildew_susceptibility", color_var = "Active_ingredients_for_both") +
+  theme_classic() + theme(legend.position = "top")
+dev.off()
+
+# Figure 6
+png(file = "partial_downy0.png", width=15,height=15,units="cm" , res = 1000)
+sv_waterfall(sv1, sv1$X$Downy_mildew_susceptibility == "0") +
+  theme(axis.text = element_text(size = 11)) +
+  ggtitle("Downy mildew resistant")
+dev.off()
+
+
+png(file = "partial_Downy1.png", width=15,height=15,units="cm" , res = 1000)
+sv_waterfall(sv1, sv1$X$Downy_mildew_susceptibility == "1") +
+  theme(axis.text = element_text(size = 11)) +
+  ggtitle("Downy mildew susceptible")
+dev.off()
+
+
+# Figure 7
+
+png(file = "partial_Group1.png", width=15,height=15,units="cm" , res = 1000)
+sv_waterfall(sv1, sv1$X$Group == "1") +
+  theme(axis.text = element_text(size = 11)) +
+  ggtitle("Group=1")
+dev.off()
+
+png(file = "partial_Group2.png", width=15,height=15,units="cm" , res = 1000)
+sv_waterfall(sv1, sv1$X$Group == "2") +
+  theme(axis.text = element_text(size = 11)) +
+  ggtitle("Group=2")
+dev.off()
+
+png(file = "partial_Group3.png", width=15,height=15,units="cm" , res = 1000)
+sv_waterfall(sv1, sv1$X$Group == "3") +
+  theme(axis.text = element_text(size = 11)) +
+  ggtitle("Group=3")
+dev.off()
+
+
+
+
