@@ -1,0 +1,346 @@
+# Loading library
+library(magrittr) # needs to be run every time you start R and want to use %>%
+library(dplyr)    # alternatively, this also loads %>%
+library(ggplot2)
+library(psych)
+library(corrr)
+library(tidyverse)
+library(gridExtra)
+library(rsample)   # data splitting
+library(ggplot2)   # allows extension of visualizations
+library(dplyr)     # basic data transformation
+library(stargazer) #We have to library the package every time we use
+library(skimr)
+library("CausalGPS")
+library(CBPS)
+library(lattice)
+library(MASS)
+require(pscl) # alternatively can use package ZIM for zero-inflated models
+library(lmtest)
+library(cowplot)
+
+
+df <- read.csv(".../2014 to 2017 Oregon Pesticide Use Record Database_04132026_v9.csv", check.names=FALSE)
+
+# remove 2018 year
+df <- df %>%
+  filter(!Year %in% c("2018"))
+
+# Only use fungicide
+df_fun_her <- subset(df, Type == "Fungicide")
+
+
+# remove the following active ingredients
+df_fun_her <- df_fun_her %>%
+  filter(!Active %in% c("Clethodim", "Clopyralid","Dimethenamid-P",
+                        "Glyphosate", "Pendimethalin","Norflurazon"))
+
+df_fun_her$formatted_name <- sprintf("%s%s", df_fun_her$Year, df_fun_her$`Field ID`)
+
+# remove no lattitude and longitude
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "20148"), ]
+
+# remove no pruning information
+df_fun_her <- df_fun_her[!(df_fun_her$Pruning == "."), ]
+
+# remove no gpa on note variable
+# df_fun_her <- df_fun_her[!(df_fun_her$Notes == "0 gpa (injected)"), ]
+
+
+# Specify the column to one-hot encode (Powdery)
+target_col <- "Powdery"
+
+# Ensure the column is a factor
+df_fun_her[[target_col]] <- as.factor(df_fun_her[[target_col]])
+
+# Perform one-hot encoding for the specific column
+one_hot <- model.matrix(~ . - 1, data = df_fun_her[target_col]) %>% as.data.frame()
+
+df_fun_her <- cbind(df_fun_her, one_hot)
+
+
+# Specify the column to one-hot encode (Powdery)
+target_col <- "Downy"
+
+# Ensure the column is a factor
+df_fun_her[[target_col]] <- as.factor(df_fun_her[[target_col]])
+
+# Perform one-hot encoding for the specific column
+one_hot <- model.matrix(~ . - 1, data = df_fun_her[target_col]) %>% as.data.frame()
+
+df_fun_her <- cbind(df_fun_her, one_hot)
+
+# Specify the column to one-hot encode (Both)
+target_col <- "Both"
+
+# Ensure the column is a factor
+df_fun_her[[target_col]] <- as.factor(df_fun_her[[target_col]])
+
+# Perform one-hot encoding for the specific column
+one_hot <- model.matrix(~ . - 1, data = df_fun_her[target_col]) %>% as.data.frame()
+
+df_fun_her <- cbind(df_fun_her, one_hot)
+
+# No information on weighted degree centrality
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "201424"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "201440"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "201480"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "201521"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "201553"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "201554"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "201625"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "201657"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "201658"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "201659"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "201671"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "201672"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "201674"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "201675"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "201783"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "201785"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "2016103"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "2016109"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "2016111"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "2016118"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "2017104"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "2017109"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "2017110"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "2017113"), ]
+
+# Downy_mildew_susceptibility >= 3 , 1, 0 dummy
+df_fun_her$Downy_mildew_susceptibility <- ifelse(df_fun_her$Downy_mildew_susceptibility >= 3, "1", "0")
+
+
+# Specify the column to one-hot encode
+target_col <- "Quadrant"
+
+# Ensure the column is a factor
+df_fun_her[[target_col]] <- as.factor(df_fun_her[[target_col]])
+
+# Perform one-hot encoding for the specific column
+one_hot <- model.matrix(~ . - 1, data = df_fun_her[target_col]) %>% as.data.frame()
+
+df_fun_her <- cbind(df_fun_her, one_hot)
+
+
+# if Downy_mildew_susceptibility=0
+df_fun_her <- df_fun_her[!(df_fun_her$Downy_mildew_susceptibility > "0"), ]
+
+# if Downy_mildew_susceptibility=1
+# df_fun_her <- df_fun_her[!(df_fun_her$Downy_mildew_susceptibility < "1"), ]
+
+
+df_v1 <- subset(df_fun_her, select=c('Susceptibility_to_R6_Strains','Susceptibility_to_non_R6_Strains',
+                                     'Initial_strain','Pruning', 
+                                     'Annual_costs_for_both','Active_ingredients_for_both',
+                                     'Annual_costs_for_powdery_only_both','Active_ingredients_for_powdery_only_both',
+                                     'QuadrantNE','QuadrantNW','QuadrantSE','QuadrantSW',
+                                     'Group_type_active','Disease_incidence_April',
+                                     'Disease_incidence_May','Disease_incidence_June',
+                                     'Disease_incidence_July',
+                                     'Disease_incidence'))
+
+df_v1$Susceptibility_to_R6_Strains <- as.numeric(df_v1$Susceptibility_to_R6_Strains)
+df_v1$Susceptibility_to_non_R6_Strains <- as.numeric(df_v1$Susceptibility_to_non_R6_Strains)
+df_v1$Initial_strain <- as.numeric(df_v1$Initial_strain)
+df_v1$Pruning <- as.numeric(df_v1$Pruning)
+df_v1$Annual_costs_for_both <- as.numeric(df_v1$Annual_costs_for_both)
+df_v1$Active_ingredients_for_both <- as.numeric(df_v1$Active_ingredients_for_both)
+df_v1$Annual_costs_for_powdery_only_both <- as.numeric(df_v1$Annual_costs_for_powdery_only_both)
+df_v1$Active_ingredients_for_powdery_only_both <- as.numeric(df_v1$Active_ingredients_for_powdery_only_both)
+df_v1$QuadrantNE <- as.numeric(df_v1$QuadrantNE)
+df_v1$QuadrantNW <- as.numeric(df_v1$QuadrantNW)
+df_v1$QuadrantSE <- as.numeric(df_v1$QuadrantSE)
+df_v1$QuadrantSW <- as.numeric(df_v1$QuadrantSW)
+df_v1$Group_type_active <- as.numeric(df_v1$Group_type_active)
+df_v1$Disease_incidence_April <- as.numeric(df_v1$Disease_incidence_April)
+df_v1$Disease_incidence_May <- as.numeric(df_v1$Disease_incidence_May)
+df_v1$Disease_incidence_June <- as.numeric(df_v1$Disease_incidence_June)
+df_v1$Disease_incidence_July <- as.numeric(df_v1$Disease_incidence_July)
+df_v1$Disease_incidence <- as.numeric(df_v1$Disease_incidence)
+df_v1$Annual_costs_for_both <- as.numeric(df_v1$Annual_costs_for_both)
+
+colnames(df_v1)[colnames(df_v1) == "Group_type_active"] <- "Group"
+colnames(df_v1)[colnames(df_v1) == "Disease_incidence_April"] <- "Powdery_mildew_incidence_April"
+colnames(df_v1)[colnames(df_v1) == "Disease_incidence_May"] <- "Powdery_mildew_incidence_May"
+colnames(df_v1)[colnames(df_v1) == "Disease_incidence_June"] <- "Powdery_mildew_incidence_June"
+colnames(df_v1)[colnames(df_v1) == "Disease_incidence_July"] <- "Powdery_mildew_incidence_July"
+colnames(df_v1)[colnames(df_v1) == "Disease_incidence"] <- "Seasonal_powdery_mildew_incidence"
+colnames(df_v1)[colnames(df_v1) == "QuadrantNE"] <- "Quadrant_NE"
+colnames(df_v1)[colnames(df_v1) == "QuadrantNW"] <- "Quadrant_NW"
+colnames(df_v1)[colnames(df_v1) == "QuadrantSE"] <- "Quadrant_SE"
+colnames(df_v1)[colnames(df_v1) == "QuadrantSW"] <- "Quadrant_SW"
+colnames(df_v1)[colnames(df_v1) == "Susceptibility_to_R6_Strains"] <- "Susceptibility_to_V6_Strains"
+colnames(df_v1)[colnames(df_v1) == "Susceptibility_to_non_R6_Strains"] <- "Susceptibility_to_non_V6_Strains"
+
+# Dif owny_mildew_susceptibility=0
+df_v1$id <- seq(1913)
+
+# if Downy_mildew_susceptibility=1
+# df_v1$id <- seq(4023)
+
+set.seed(123)
+
+
+m_xgboost <- function(nthread = 1,
+                      ntrees = 1000,
+                      shrinkage = 0.3,
+                      max_depth = 5,
+                      ...) {SuperLearner::SL.xgboost(
+                        nthread = nthread,
+                        ntrees = ntrees,
+                        shrinkage=shrinkage,
+                        max_depth=max_depth,
+                        ...)}
+
+
+data_with_gps <- estimate_gps(.data = df_v1,
+                              .formula = Seasonal_powdery_mildew_incidence ~ Susceptibility_to_V6_Strains + Susceptibility_to_non_V6_Strains +
+                                Initial_strain + Pruning +  Annual_costs_for_both + 
+                                Quadrant_NE + Quadrant_NW + Quadrant_SE + Quadrant_SW + 
+                                Group + Powdery_mildew_incidence_April +
+                                Powdery_mildew_incidence_May + Powdery_mildew_incidence_June + 
+                                Powdery_mildew_incidence_July,
+                              sl_lib = c("m_xgboost"),
+                              gps_density = "kernel")
+
+
+
+cw_object_matching <- compute_counter_weight(gps_obj = data_with_gps,
+                                             ci_appr = "weighting",
+                                             bin_seq = NULL, 
+                                             delta_n = 0.1,
+                                             dist_measure = "l1",
+                                             scale = 0.5,
+                                             use_cov_transform = TRUE,
+                                             transformers = list("pow2", "pow3", "abs", 
+                                                                 "scale"),
+                                             exposure_trim_qtls = c(0.01,0.99),
+                                             sl_lib = c("m_xgboost"),
+                                             max_attempt = 4,
+                                             dist_measure = "l1",
+                                             delta_n = 0.02,          # changed from 1 to 0.02
+                                             scale = 0.5,
+                                             nthread = 1)
+
+
+pseudo_pop <- generate_pseudo_pop(.data = df_v1,
+                                  cw_obj = cw_object_matching,
+                                  covariate_col_names = c('Susceptibility_to_V6_Strains','Susceptibility_to_non_V6_Strains',
+                                                          'Initial_strain','Pruning','Annual_costs_for_both',
+                                                          'Quadrant_NE','Quadrant_NW','Quadrant_SE','Quadrant_SW',
+                                                          'Group','Powdery_mildew_incidence_April',
+                                                          'Powdery_mildew_incidence_May','Powdery_mildew_incidence_June',
+                                                          'Powdery_mildew_incidence_July'),
+                                  covar_bl_trs = 0.3,
+                                  covar_bl_trs_type = "median",
+                                  covar_bl_method = "absolute")
+
+# Supplementary Figure 3
+png("pseudo_pop_downy0_costs.png", width=6000,height=7000, res=1000)
+plot(pseudo_pop, include_details = TRUE) + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+                                                 panel.background = element_blank(), axis.line = element_line(colour = "black")) 
+dev.off()
+
+
+# ERF
+# Annual costs
+erf_obj_nonparametric <- estimate_erf(.data = pseudo_pop$.data,
+                                      .formula = Annual_costs_for_powdery_only_both ~ Seasonal_powdery_mildew_incidence,
+                                      weights_col_name = "counter_weight",
+                                      model_type = "nonparametric",
+                                      w_vals = seq(0,0.6,0.01),
+                                      bw_seq = seq(0.2,2,0.2),
+                                      kernel_appr = "kernsmooth")
+
+
+erf_obj_nonparametric[[".data_prediction"]][["w_vals"]]
+
+erf_obj_nonparametric[[".data_prediction"]][["y_pred"]]
+
+# from raw data
+# Figure 8 
+ggplot(data=dfplot, aes(x=ExposureLevel, y=OutcomeRate, color=interaction(Group))) +
+  geom_line() + xlim(0, 0.6) + ylim(400, 1100) +
+  scale_color_manual("groups",
+                     values=c("#61d4b3","#fb8d62"))+
+  xlab("Exposure Level (Disease incidence)") + ylab("Annual costs for powdery only + both")+ 
+  theme(panel.background = element_blank(), axis.line = element_line(colour = "black")) + theme(legend.position = "top") 
+ggsave("ERF_cost_downy.png", dpi=1000, height=4, width=5, units="in") 
+
+
+# Active ingredients
+
+data_with_gps <- estimate_gps(.data = df_v1,
+                              .formula = Seasonal_powdery_mildew_incidence ~ Susceptibility_to_V6_Strains + Susceptibility_to_non_V6_Strains +
+                                Initial_strain + Pruning +  Active_ingredients_for_both + 
+                                Quadrant_NE + Quadrant_NW + Quadrant_SE + Quadrant_SW + 
+                                Group + Powdery_mildew_incidence_April +
+                                Powdery_mildew_incidence_May + Powdery_mildew_incidence_June + 
+                                Powdery_mildew_incidence_July,
+                              sl_lib = c("m_xgboost"),
+                              gps_density = "kernel")
+
+
+cw_object_matching <- compute_counter_weight(gps_obj = data_with_gps,
+                                             ci_appr = "weighting",
+                                             bin_seq = NULL, 
+                                             delta_n = 0.1,
+                                             dist_measure = "l1",
+                                             scale = 0.5,
+                                             use_cov_transform = TRUE,
+                                             transformers = list("pow2", "pow3", "abs", 
+                                                                 "scale"),
+                                             exposure_trim_qtls = c(0.01,0.99),
+                                             sl_lib = c("m_xgboost"),
+                                             max_attempt = 4,
+                                             dist_measure = "l1",
+                                             delta_n = 0.02,          # changed from 1 to 0.02
+                                             scale = 0.5,
+                                             nthread = 1)
+
+
+pseudo_pop <- generate_pseudo_pop(.data = df_v1,
+                                  cw_obj = cw_object_matching,
+                                  covariate_col_names = c('Susceptibility_to_V6_Strains','Susceptibility_to_non_V6_Strains',
+                                                          'Initial_strain','Pruning','Active_ingredients_for_both',
+                                                          'Quadrant_NE','Quadrant_NW','Quadrant_SE','Quadrant_SW',
+                                                          'Group','Powdery_mildew_incidence_April',
+                                                          'Powdery_mildew_incidence_May','Powdery_mildew_incidence_June',
+                                                          'Powdery_mildew_incidence_July'),
+                                  covar_bl_trs = 0.3,
+                                  covar_bl_trs_type = "median",
+                                  covar_bl_method = "absolute")
+
+
+# Supplementary Figure 3
+png("pseudo_pop_downy0_active.png", width=6000,height=7000, res=1000)
+plot(pseudo_pop, include_details = TRUE) + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+                                                 panel.background = element_blank(), axis.line = element_line(colour = "black")) 
+dev.off()
+
+
+erf_obj_nonparametric <- estimate_erf(.data = pseudo_pop$.data,
+                                      .formula = Active_ingredients_for_powdery_only_both ~ Disease_incidence,
+                                      weights_col_name = "counter_weight",
+                                      model_type = "nonparametric",
+                                      w_vals = seq(0,0.6,0.01),
+                                      bw_seq = seq(0.2,2,0.2),
+                                      kernel_appr = "kernsmooth")
+
+
+erf_obj_nonparametric[[".data_prediction"]][["w_vals"]]
+
+erf_obj_nonparametric[[".data_prediction"]][["y_pred"]]
+
+
+# From raw data
+# Figure 8
+ggplot(data=dfplot, aes(x=ExposureLevel, y=OutcomeRate, color=interaction(Group))) +
+  geom_line() + xlim(0, 0.6) + ylim(5, 20) +
+  scale_color_manual("groups",
+                     values=c("#61d4b3","#fb8d62"))+
+  xlab("Exposure Level (Disease incidence)") + ylab("Active ingredients for powdery only + both")+ 
+  theme(panel.background = element_blank(), axis.line = element_line(colour = "black")) + theme(legend.position = "top") 
+ggsave("ERF_active_downy.png", dpi=1000, height=4, width=5, units="in")
+
