@@ -258,7 +258,7 @@ erf_obj_nonparametric[[".data_prediction"]][["w_vals"]]
 
 erf_obj_nonparametric[[".data_prediction"]][["y_pred"]]
 
-# from raw data
+# from 257 and 259 lines
 # Figure 8 
 ggplot(data=dfplot, aes(x=ExposureLevel, y=OutcomeRate, color=interaction(Group))) +
   geom_line() + xlim(0, 0.6) + ylim(400, 1100) +
@@ -334,7 +334,7 @@ erf_obj_nonparametric[[".data_prediction"]][["w_vals"]]
 erf_obj_nonparametric[[".data_prediction"]][["y_pred"]]
 
 
-# From raw data
+# From 332 and 334 lines
 # Figure 8
 ggplot(data=dfplot, aes(x=ExposureLevel, y=OutcomeRate, color=interaction(Group))) +
   geom_line() + xlim(0, 0.6) + ylim(5, 20) +
