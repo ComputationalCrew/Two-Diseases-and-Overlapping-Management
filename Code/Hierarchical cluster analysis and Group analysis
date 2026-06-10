@@ -1,0 +1,385 @@
+# Loading library
+library(magrittr) # needs to be run every time you start R and want to use %>%
+library(dplyr)    # alternatively, this also loads %>%
+library(ggplot2)
+library(psych)
+library(corrr)
+library(tidyverse)
+library(gridExtra)
+library(rsample)   # data splitting
+library(ggplot2)   # allows extension of visualizations
+library(dplyr)     # basic data transformation
+library(stargazer) #We have to library the package every time we use
+library(skimr)
+library(CBPS)
+library(lattice)
+library(MASS)
+require(pscl) # alternatively can use package ZIM for zero-inflated models
+library(lmtest)
+library(PSweight)
+library(magrittr) # needs to be run every time you start R and want to use %>%
+library(reshape) # load the reshape package from Hadley -- he has created GREAT packages
+library("pheatmap")
+library(factoextra)
+library(NbClust)
+
+df <- read.csv(".../2014 to 2017 Oregon Pesticide Use Record Database_04132026.csv", check.names=FALSE)
+
+df <- df %>%
+  filter(!Year %in% c("2018"))
+
+df_fun_her <- subset(df, Type == "Fungicide" | Type == "Herbicide")
+
+df_fun_her <- df_fun_her %>%
+  filter(!Active %in% c("Clethodim", "Clopyralid","Dimethenamid-P", 
+                        "Glyphosate", "Pendimethalin","Norflurazon"))
+
+df_fun_her$formatted_name <- sprintf("%s%s", df_fun_her$Year, df_fun_her$`Field ID`)
+
+
+#find count by formatted_name, Active
+data_type <- df_fun_her %>%
+  group_by(formatted_name, Active) %>% 
+  summarize(sum_Type = n())
+
+
+# reshape the data from long to wide
+data_type <- cast(data_type , Active ~ formatted_name)
+
+# Replace all NA values with 0
+data_type[is.na(data_type)] <- 0
+
+scaled_type <- scale(data_type)
+
+Type <- read.csv(".../type.csv", row.names="Model")
+
+# Figure 1
+png("silhouettetype.png",width=15,height=12,units="cm" , res = 1000)
+fviz_nbclust(scaled_type, FUNcluster = hcut, method = c("silhouette"))
+dev.off()
+
+# Figure 2
+png("pheatmaptype.png",width=40,height=20,units="cm" , res = 1000)
+clustered_data <- pheatmap(scaled_type, 
+                           name = "Number of active ingredients used",
+                           main = "     Number of active ingredients used",
+                           cluster_rows = T, cluster_cols = T, cutree_col = 3,
+                           display_numbers = F,
+                           annotation_row = Type,
+                           color = hcl.colors(550, "Spectral"),
+                           clustering_method="complete",
+                           clustering_distance_cols="euclidean",
+                           clustering_distance_rows="euclidean",
+                           treeheight_row = 10,
+                           treeheight_col = 10,
+                           cluster_row = T,
+                           cluster_col = T,
+                           show_rownames = T,
+                           show_colnames = F,
+                           legend = T,
+                           fontsize = 8)
+dev.off()
+
+
+
+df_descriptive <- read.csv(".../2014 to 2017 Oregon Pesticide Use Record Database_04132026_descriptive.csv", check.names=FALSE)
+
+merged_df <- merge(df_descriptive, df_b, by = "ID")
+
+
+merged_df <- merged_df %>%
+  filter(!Year %in% c("2018"))
+
+merged_df <- subset(merged_df, Type == "Fungicide" | Type == "Herbicide")
+
+merged_df <- merged_df %>%
+  filter(!Active %in% c("Clethodim", "Clopyralid","Dimethenamid-P", 
+                        "Glyphosate", "Pendimethalin","Norflurazon"))
+
+merged_df$formatted_name <- sprintf("%s%s", merged_df$Year, merged_df$`Field ID`)
+
+
+# write.csv(merged_df, "merged_df1.csv", row.names = FALSE)
+
+
+n <- 7544  # Number of elements
+d <- data.frame(
+  count = rep(1, n)         # repeat numeric value 100 n times
+)
+print(d)
+
+# Supplementary Table 3
+result <- merged_df %>%
+  group_by(Active, b) %>%
+  summarise(count = n())
+print(result)
+
+
+# LSD (Table 1)
+
+library(agricolae)
+
+merged_df$Ametoctradin_Dimethomorph <- as.numeric(merged_df$Ametoctradin_Dimethomorph)
+merged_df$Boscalid_Pyraclostrobin <- as.numeric(merged_df$Boscalid_Pyraclostrobin)
+merged_df$Carfentrazone <- as.numeric(merged_df$Carfentrazone)
+merged_df$Copper_diammonia_diacetate_complex <- as.numeric(merged_df$Copper_diammonia_diacetate_complex)
+merged_df$Copper_hydroxide <- as.numeric(merged_df$Copper_hydroxide)
+merged_df$Copper_oxide <- as.numeric(merged_df$Copper_oxide)
+merged_df$Cyazofamid <- as.numeric(merged_df$Cyazofamid)
+merged_df$Cymoxanil <- as.numeric(merged_df$Cymoxanil)
+merged_df$Dimethomorph <- as.numeric(merged_df$Dimethomorph)
+merged_df$Famoxadone_Cymoxanil <- as.numeric(merged_df$Famoxadone_Cymoxanil)
+merged_df$Flumioxazin <- as.numeric(merged_df$Flumioxazin)
+merged_df$Fluopyram <- as.numeric(merged_df$Fluopyram)
+merged_df$Fluopyram_Trifloxystrobin <- as.numeric(merged_df$Fluopyram_Trifloxystrobin)
+merged_df$Folpet <- as.numeric(merged_df$Folpet)
+merged_df$Fosetyl_aluminum <- as.numeric(merged_df$Fosetyl_aluminum)
+merged_df$Mandipropamid <- as.numeric(merged_df$Mandipropamid)
+merged_df$Mefenoxam <- as.numeric(merged_df$Mefenoxam)
+merged_df$Metrafenone <- as.numeric(merged_df$Metrafenone)
+merged_df$Mineral_oil <- as.numeric(merged_df$Mineral_oil)
+merged_df$Myclobutanil <- as.numeric(merged_df$Myclobutanil)
+merged_df$Paraquat <- as.numeric(merged_df$Paraquat)
+merged_df$Phosphorous_acid <- as.numeric(merged_df$Phosphorous_acid)
+merged_df$Potassium_bicarbonate <- as.numeric(merged_df$Potassium_bicarbonate)
+merged_df$Quinoxyfen <- as.numeric(merged_df$Quinoxyfen)
+merged_df$Reynoutria_sachalinensis <- as.numeric(merged_df$Reynoutria_sachalinensis)
+merged_df$Spiroxamine <- as.numeric(merged_df$Spiroxamine)
+merged_df$Sulfur <- as.numeric(merged_df$Sulfur)
+merged_df$Tebuconazole <- as.numeric(merged_df$Tebuconazole)
+merged_df$Trifloxystrobin <- as.numeric(merged_df$Trifloxystrobin)
+merged_df$Triflumizole <- as.numeric(merged_df$Triflumizole)
+merged_df$b <- as.factor(merged_df$b)
+
+# Ametoctradin_Dimethomorph
+model <- aov(Ametoctradin_Dimethomorph ~ b, data = merged_df)
+summary(model)
+# Perform Fisher's LSD test
+print(LSD.test(model, "b"))
+
+
+# Boscalid_Pyraclostrobin
+model <- aov(Boscalid_Pyraclostrobin ~ b, data = merged_df)
+summary(model)
+# Perform Fisher's LSD test
+print(LSD.test(model, "b"))
+
+
+# Carfentrazone
+model <- aov(Carfentrazone ~ b, data = merged_df)
+summary(model)
+# Perform Fisher's LSD test
+print(LSD.test(model, "b"))
+
+
+
+# Copper_diammonia_diacetate_complex
+model <- aov(Copper_diammonia_diacetate_complex ~ b, data = merged_df)
+summary(model)
+# Perform Fisher's LSD test
+print(LSD.test(model, "b"))
+
+# Copper_hydroxide
+model <- aov(Copper_hydroxide ~ b, data = merged_df)
+summary(model)
+# Perform Fisher's LSD test
+print(LSD.test(model, "b"))
+
+
+# Copper_oxide
+model <- aov(Copper_oxide ~ b, data = merged_df)
+summary(model)
+# Perform Fisher's LSD test
+print(LSD.test(model, "b"))
+
+
+# Cyazofamid
+model <- aov(Cyazofamid ~ b, data = merged_df)
+summary(model)
+# Perform Fisher's LSD test
+print(LSD.test(model, "b"))
+
+
+# Cymoxanil
+model <- aov(Cymoxanil ~ b, data = merged_df)
+summary(model)
+# Perform Fisher's LSD test
+print(LSD.test(model, "b"))
+
+
+# Dimethomorph
+model <- aov(Dimethomorph ~ b, data = merged_df)
+summary(model)
+# Perform Fisher's LSD test
+print(LSD.test(model, "b"))
+
+
+# Famoxadone_Gymoxon
+model <- aov(Famoxadone_Cymoxanil ~ b, data = merged_df)
+summary(model)
+# Perform Fisher's LSD test
+print(LSD.test(model, "b"))
+
+
+# Flumioxazin
+model <- aov(Flumioxazin ~ b, data = merged_df)
+summary(model)
+# Perform Fisher's LSD test
+print(LSD.test(model, "b"))
+
+
+# Fluopyram
+model <- aov(Fluopyram ~ b, data = merged_df)
+summary(model)
+# Perform Fisher's LSD test
+print(LSD.test(model, "b"))
+
+
+# Fluopyram_Trifloxystrobin
+model <- aov(Fluopyram_Trifloxystrobin ~ b, data = merged_df)
+summary(model)
+# Perform Fisher's LSD test
+print(LSD.test(model, "b"))
+
+
+# Folpet
+model <- aov(Folpet ~ b, data = merged_df)
+summary(model)
+# Perform Fisher's LSD test
+print(LSD.test(model, "b"))
+
+
+# Fosetyl_aluminum
+model <- aov(Fosetyl_aluminum ~ b, data = merged_df)
+summary(model)
+# Perform Fisher's LSD test
+print(LSD.test(model, "b"))
+
+
+# Mandipropamid
+model <- aov(Mandipropamid ~ b, data = merged_df)
+summary(model)
+# Perform Fisher's LSD test
+print(LSD.test(model, "b"))
+
+
+# Mefenoxam
+model <- aov(Mefenoxam ~ b, data = merged_df)
+summary(model)
+# Perform Fisher's LSD test
+print(LSD.test(model, "b"))
+
+
+# Metrafenone
+model <- aov(Metrafenone ~ b, data = merged_df)
+summary(model)
+# Perform Fisher's LSD test
+print(LSD.test(model, "b"))
+
+
+# Mineral_oil
+model <- aov(Mineral_oil ~ b, data = merged_df)
+summary(model)
+# Perform Fisher's LSD test
+print(LSD.test(model, "b"))
+
+
+# Myclobutanil
+model <- aov(Myclobutanil ~ b, data = merged_df)
+summary(model)
+# Perform Fisher's LSD test
+print(LSD.test(model, "b"))
+
+
+
+# Paraquat
+model <- aov(Paraquat ~ b, data = merged_df)
+summary(model)
+# Perform Fisher's LSD test
+print(LSD.test(model, "b"))
+
+
+# Phosphorous_acid
+model <- aov(Phosphorous_acid ~ b, data = merged_df)
+summary(model)
+# Perform Fisher's LSD test
+print(LSD.test(model, "b"))
+
+
+# Potassium_bicarbonate
+model <- aov(Potassium_bicarbonate ~ b, data = merged_df)
+summary(model)
+# Perform Fisher's LSD test
+print(LSD.test(model, "b"))
+
+
+# Quinoxyfen
+model <- aov(Quinoxyfen ~ b, data = merged_df)
+summary(model)
+# Perform Fisher's LSD test
+print(LSD.test(model, "b"))
+
+
+# Reynoutria_sachalinensis
+model <- aov(Reynoutria_sachalinensis ~ b, data = merged_df)
+summary(model)
+# Perform Fisher's LSD test
+print(LSD.test(model, "b"))
+
+
+# Spiroxamine
+model <- aov(Spiroxamine ~ b, data = merged_df)
+summary(model)
+# Perform Fisher's LSD test
+print(LSD.test(model, "b"))
+
+
+# Sulfur
+model <- aov(Sulfur ~ b, data = merged_df)
+summary(model)
+# Perform Fisher's LSD test
+print(LSD.test(model, "b"))
+
+# Tebuconazole
+model <- aov(Tebuconazole ~ b, data = merged_df)
+summary(model)
+# Perform Fisher's LSD test
+print(LSD.test(model, "b"))
+
+# Trifloxystrobin
+model <- aov(Trifloxystrobin ~ b, data = merged_df)
+summary(model)
+# Perform Fisher's LSD test
+print(LSD.test(model, "b"))
+
+# Triflumizole
+model <- aov(Triflumizole ~ b, data = merged_df)
+summary(model)
+# Perform Fisher's LSD test
+print(LSD.test(model, "b"))
+
+# Relative frequency of variety (Supplementary Table 4)
+
+Variety <- merged_df[!duplicated(merged_df[c('ID')]), ]
+Variety$b <- as.factor(Variety$b)
+str(Variety)
+
+levels(Variety$b)[1] <- 'Group 1'
+levels(Variety$b)[2] <- 'Group 2'
+levels(Variety$b)[3] <- 'Group 3'
+
+
+df_Variety <- subset(Variety, select=c('Variety','b'))
+
+#find count by formatted_name, Active
+df_Variety <- df_Variety %>%
+  group_by(Variety, b) %>% 
+  summarize(sum_Type = n())
+
+
+# reshape the data from long to wide
+# df_Variety  <- cast(df_Variety  , b ~ Variety)
+
+df_Variety  <- cast(df_Variety  , Variety ~ b)
+
+
