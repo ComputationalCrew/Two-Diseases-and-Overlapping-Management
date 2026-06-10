@@ -1,0 +1,164 @@
+library(tidyverse)
+library(caret)
+library(GGally)
+library(ggplot2)
+library(corrplot)
+library(projpred)
+library(janitor)
+library(readr)
+library(stargazer) #We have to library the package every time we use
+library(MASS)
+library(titanic)
+library(Amelia)
+library(dplyr)
+library(modeest)
+library(ggplot2)
+library(cowplot)
+library(mice)
+library(caTools)
+library(caret)
+
+SEED=123
+
+
+# Upload the data
+MLR_SB <- read.csv(".../downy_mildew_fungicide_record_database_SB_V10_Multinomial.csv", check.names=FALSE)
+
+
+for (i in 1:12) {
+MLR_SB[i] <- scale(MLR_SB[i])
+}
+
+
+MLR_SB$group <- as.factor(MLR_SB$group)
+MLR_SB$pruning <- as.factor(MLR_SB$pruning)
+MLR_SB$susceptibility.to.r6.Strains <- as.factor(MLR_SB$susceptibility.to.r6.Strains)
+MLR_SB$susceptibility.to.nonr6.Strains <- as.factor(MLR_SB$susceptibility.to.nonr6.Strains)
+MLR_SB$Downy_mildew_susceptibility <- as.factor(MLR_SB$Downy_mildew_susceptibility)
+MLR_SB$year <- as.factor(MLR_SB$year)
+MLR_SB$Grower <- as.factor(MLR_SB$Grower)
+MLR_SB$spray.date <- as.numeric(MLR_SB$spray.date)
+
+str(MLR_SB)
+# check that A is now our reference
+levels(MLR_SB$group)
+
+
+# define reference by ensuring it is the first level of the factor
+MLR_SB$group <- relevel(MLR_SB$group, ref = "Downy")
+
+MLR_SB$group <- relevel(MLR_SB$group, ref = "Powdery")
+
+MLR_SB$group <- relevel(MLR_SB$group, ref = "Both")
+
+MLR_SB$group <- relevel(MLR_SB$group, ref = "Mixture")
+
+library(nnet)
+
+
+
+# Supp Table 2. Logistic regression result 
+multi_model_S <- multinom(formula = group ~ spray.date + first.spray.date + susceptibility.to.r6.Strains + 
+                            susceptibility.to.nonr6.Strains + pruning + mildew.incidence + 
+                            disease.in.may + Downy_mildew_susceptibility + flagshoot + 
+                            year + Grower, data = MLR_SB, na.rm = TRUE)
+
+
+
+# Supplementary Table 5
+summary(multi_model_S)
+exp(coef(multi_model_S))
+gtsummary::tbl_regression(multi_model_S, intercept = TRUE)
+
+
+library(lmtest)
+lrtest(multi_model_S)
+
+library(pscl)
+
+#calculate McFadden's R-squared for model
+pR2(multi_model_S)['McFadden']
+
+
+# Variable importance
+
+library(Boruta)
+
+boruta_output <- Boruta(MLR_SB$group ~ spray.date + first.spray.date + susceptibility.to.r6.Strains + 
+                          susceptibility.to.nonr6.Strains + pruning + mildew.incidence + 
+                          disease.in.may + Downy_mildew_susceptibility + flagshoot + 
+                          year + Grower, data = MLR_SB, doTrace = 2
+)
+boruta_output
+
+rough_fix_mod <- TentativeRoughFix(boruta_output)
+boruta_signif <- getSelectedAttributes(rough_fix_mod)
+boruta_signif
+
+importances <- attStats(rough_fix_mod)
+importances <- importances[importances$decision != "Rejected", c("meanImp", "decision")]
+importances[order(-importances$meanImp), ]
+
+
+# Table 4. stepwise logistic regression result 
+
+# Perform stepwise logistic regression
+step.model <- stepAIC(multi_model_S, direction="both", trace = FALSE)
+# Summarize the final selected model
+summary(step.model)
+exp(coef(step.model))
+gtsummary::tbl_regression(step.model, intercept = TRUE)
+lrtest(multi_model_S)
+#calculate McFadden's R-squared for model
+pR2(multi_model_S)['McFadden']
+
+
+# Fitted value
+training_pred <- predict(step.model, MLR_SB, type="probs")
+
+library(Boruta)
+
+boruta_output <- Boruta(MLR_SB$group ~ spray.date + first.spray.date + 
+                          susceptibility.to.nonr6.Strains + mildew.incidence + disease.in.may +
+                          year + Grower, data = MLR_SB, doTrace = 2
+)
+boruta_output
+
+rough_fix_mod <- TentativeRoughFix(boruta_output)
+boruta_signif <- getSelectedAttributes(rough_fix_mod)
+boruta_signif
+
+importances <- attStats(rough_fix_mod)
+importances <- importances[importances$decision != "Rejected", c("meanImp", "decision")]
+importances[order(-importances$meanImp), ]
+
+
+multi_model_S_prob <- read.csv(".../downy_mildew_fungicide_record_database_SB_V10_Multinomial_fitted_downy.csv", check.names=FALSE)
+multi_model_S_prob$mi <- as.factor(multi_model_S_prob$mi)
+
+
+# Figure 9. Predicted probability
+# Mildew incidence
+p <- ggplot(multi_model_S_prob, aes(x=mildew.incidence, y=Downy)) +
+  scale_y_continuous(limits = c(0, 1)) + geom_smooth()
+p + theme(text = element_text(size = 40)) + theme(legend.position="none") + labs(title="Probability of changing switch behavior", subtitle = "to downy ", x ="Plants with powdery mildew (proportion)", y = "Predicted probability") + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+                                                                                                                                                                                                                                                 panel.background = element_blank(), axis.line = element_line(colour = "black"))
+ggsave('multi_model_D_prob.jpg', dpi = 1000, height = 12, width = 15, unit = 'in')
+
+
+# Spray date
+p <- ggplot(multi_model_S_prob, aes(x=spray.date, y=Downy, color=mi)) +
+  scale_y_continuous(limits = c(0, 1)) + geom_smooth()
+p + theme(text = element_text(size = 40)) + theme(legend.position="top") + labs(title="Probability of changing switch behavior", subtitle = "to downy ", x ="Spray date", y = "Predicted probability") + guides(color=guide_legend(title="Mildew incidence Dummy")) + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+                                                                                                                                                                                                                                                                                panel.background = element_blank(), axis.line = element_line(colour = "black"))
+ggsave('multi_model_D_prob_spray.date.jpg', dpi = 1000, height = 12, width = 15, unit = 'in')
+
+
+# First Spray date
+p <- ggplot(multi_model_S_prob, aes(x=first.spray.date, y=Downy, color=mi)) +
+  scale_y_continuous(limits = c(0, 1)) + geom_smooth()
+p + theme(text = element_text(size = 40)) + theme(legend.position="top") + labs(title="Probability of changing switch behavior", subtitle = "to downy ", x ="First spray date", y = "Predicted probability") + guides(color=guide_legend(title="Mildew incidence Dummy")) + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+                                                                                                                                                                                                                                                                                      panel.background = element_blank(), axis.line = element_line(colour = "black"))
+ggsave('multi_model_D_prob_first.spray.date.jpg', dpi = 1000, height = 12, width = 15, unit = 'in')
+
+
