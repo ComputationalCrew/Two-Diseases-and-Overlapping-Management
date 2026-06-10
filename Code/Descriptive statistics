@@ -1,0 +1,307 @@
+# Loading library
+library(magrittr) # needs to be run every time you start R and want to use %>%
+library(dplyr)    # alternatively, this also loads %>%
+library(ggplot2)
+library(psych)
+library(corrr)
+library(tidyverse)
+library(gridExtra)
+library(rsample)   # data splitting
+library(ggplot2)   # allows extension of visualizations
+library(dplyr)     # basic data transformation
+#library(h2o)       # machine learning modeling
+library(iml)       # ML interprtation
+library(stargazer) #We have to library the package every time we use
+library(skimr)
+
+df <- read.csv(".../2014 to 2017 Oregon Pesticide Use Record Database_04132026_v9.csv", check.names=FALSE)
+
+# remove 2018 year
+df <- df %>%
+  filter(!Year %in% c("2018"))
+
+# Only use fungicide
+df_fun_her <- subset(df, Type == "Fungicide")
+
+
+# remove the following active ingredients
+df_fun_her <- df_fun_her %>%
+  filter(!Active %in% c("Clethodim", "Clopyralid","Dimethenamid-P",
+                        "Glyphosate", "Pendimethalin","Norflurazon"))
+
+df_fun_her$formatted_name <- sprintf("%s%s", df_fun_her$Year, df_fun_her$`Field ID`)
+
+# remove no lattitude and longitude
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "20148"), ]
+
+# remove no pruning information
+df_fun_her <- df_fun_her[!(df_fun_her$Pruning == "."), ]
+
+
+# Specify the column to one-hot encode (Powdery)
+target_col <- "Powdery"
+
+# Ensure the column is a factor
+df_fun_her[[target_col]] <- as.factor(df_fun_her[[target_col]])
+
+# Perform one-hot encoding for the specific column
+one_hot <- model.matrix(~ . - 1, data = df_fun_her[target_col]) %>% as.data.frame()
+
+df_fun_her <- cbind(df_fun_her, one_hot)
+
+
+# Specify the column to one-hot encode (Powdery)
+target_col <- "Downy"
+
+# Ensure the column is a factor
+df_fun_her[[target_col]] <- as.factor(df_fun_her[[target_col]])
+
+# Perform one-hot encoding for the specific column
+one_hot <- model.matrix(~ . - 1, data = df_fun_her[target_col]) %>% as.data.frame()
+
+df_fun_her <- cbind(df_fun_her, one_hot)
+
+# Specify the column to one-hot encode (Both)
+target_col <- "Both"
+
+# Ensure the column is a factor
+df_fun_her[[target_col]] <- as.factor(df_fun_her[[target_col]])
+
+# Perform one-hot encoding for the specific column
+one_hot <- model.matrix(~ . - 1, data = df_fun_her[target_col]) %>% as.data.frame()
+
+df_fun_her <- cbind(df_fun_her, one_hot)
+
+# No information on weighted degree centrality
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "201424"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "201440"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "201480"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "201521"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "201553"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "201554"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "201625"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "201657"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "201658"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "201659"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "201671"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "201672"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "201674"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "201675"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "201783"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "201785"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "2016103"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "2016109"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "2016111"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "2016118"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "2017104"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "2017109"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "2017110"), ]
+df_fun_her <- df_fun_her[!(df_fun_her$Name == "2017113"), ]
+
+# Downy_mildew_susceptibility >= 3 , 1, 0 dummy
+df_fun_her$Downy_mildew_susceptibility <- ifelse(df_fun_her$Downy_mildew_susceptibility >= 3, "1", "0")
+
+# Specify the column to one-hot encode
+target_col <- "Quadrant"
+
+# Ensure the column is a factor
+df_fun_her[[target_col]] <- as.factor(df_fun_her[[target_col]])
+
+# Perform one-hot encoding for the specific column
+one_hot <- model.matrix(~ . - 1, data = df_fun_her[target_col]) %>% as.data.frame()
+
+df_fun_her <- cbind(df_fun_her, one_hot)
+
+# df_fun_her <- df_fun_her[(df_fun_her$Type1 == "Powdery"), ]
+
+
+df_EDA <- subset(df_fun_her, select=c('Susceptibility_to_R6_Strains','Susceptibility_to_non_R6_Strains',
+                                     'Initial_strain','Pruning',
+                                     'Downy_mildew_susceptibility',
+                                     'Annual_costs_total_fungicides',	'Active_ingredients_total_fungicides',	
+                                     'Annual_costs_for_downy_only',	'Active_ingredients_for_downy_only',	
+                                     'Annual_costs_for_powdery_only',	'Active_ingredients_for_powdery_only',	
+                                     'Annual_costs_for_both',	'Active_ingredients_for_both',	
+                                     'Annual_costs_for_powdery_only_both',	'Active_ingredients_for_powdery_only_both',
+                                     'QuadrantNE','QuadrantNW','QuadrantSE','QuadrantSW',
+                                     'Group_type_active','Disease_incidence_April',
+                                     'Disease_incidence_May','Disease_incidence_June',
+                                     'Disease_incidence_July',
+                                     'Disease_incidence'))
+
+str(df_EDA)
+
+df_EDA$Susceptibility_to_R6_Strains <- as.numeric(df_EDA$Susceptibility_to_R6_Strains)
+df_EDA$Susceptibility_to_non_R6_Strains <- as.numeric(df_EDA$Susceptibility_to_non_R6_Strains)
+df_EDA$Pruning <- as.numeric(df_EDA$Pruning)
+df_EDA$Group_type_active <- as.numeric(df_EDA$Group_type_active)
+df_EDA$Downy_mildew_susceptibility <- as.numeric(df_EDA$Downy_mildew_susceptibility)
+df_EDA$Initial_strain <- as.numeric(df_EDA$Initial_strain)
+df_EDA$Annual_costs_total_fungicides <- as.numeric(df_EDA$Annual_costs_total_fungicides)
+df_EDA$Active_ingredients_total_fungicides <- as.numeric(df_EDA$Active_ingredients_total_fungicides)
+df_EDA$Annual_costs_for_downy_only <- as.numeric(df_EDA$Annual_costs_for_downy_only)
+df_EDA$Active_ingredients_for_downy_only <- as.numeric(df_EDA$Active_ingredients_for_downy_only)
+df_EDA$Annual_costs_for_powdery_only <- as.numeric(df_EDA$Annual_costs_for_powdery_only)
+df_EDA$Active_ingredients_for_powdery_only <- as.numeric(df_EDA$Active_ingredients_for_powdery_only)
+df_EDA$Annual_costs_for_both <- as.numeric(df_EDA$Annual_costs_for_both)
+df_EDA$Active_ingredients_for_both <- as.numeric(df_EDA$Active_ingredients_for_both)
+df_EDA$Annual_costs_for_powdery_only_both <- as.numeric(df_EDA$Annual_costs_for_powdery_only_both)
+df_EDA$Active_ingredients_for_powdery_only_both <- as.numeric(df_EDA$Active_ingredients_for_powdery_only_both)
+df_EDA$Group_type_active <- as.numeric(df_EDA$Group_type_active)
+df_EDA$Disease_incidence_April <- as.numeric(df_EDA$Disease_incidence_April)
+df_EDA$Disease_incidence_May <- as.numeric(df_EDA$Disease_incidence_May)
+df_EDA$Disease_incidence_June <- as.numeric(df_EDA$Disease_incidence_June)
+df_EDA$Disease_incidence_July <- as.numeric(df_EDA$Disease_incidence_July)
+df_EDA$Disease_incidence <- as.numeric(df_EDA$Disease_incidence)
+
+# Table 1. Descriptive Statistics
+stargazer(df_EDA, type = "text", title="Descriptive statistics", digits=2, out="table1.txt")
+
+
+# Summary statistics
+aggregate(cbind(Susceptibility_to_R6_Strains, Susceptibility_to_non_R6_Strains,
+                Initial_strain,Pruning,Downy_mildew_susceptibility,
+                Annual_costs_total_fungicides,	Active_ingredients_total_fungicides,	
+                Annual_costs_for_downy_only,	Active_ingredients_for_downy_only,	
+                Annual_costs_for_powdery_only,	Active_ingredients_for_powdery_only,	
+                Annual_costs_for_both,	Active_ingredients_for_both,	
+                Annual_costs_for_powdery_only_both,	Active_ingredients_for_powdery_only_both,
+                Disease_incidence_April,  Disease_incidence_May,
+                Disease_incidence_June,Disease_incidence_July,Disease_incidence) ~ Group_type_active, data = df_EDA, mean)
+
+aggregate(cbind(Susceptibility_to_R6_Strains, Susceptibility_to_non_R6_Strains,
+                Initial_strain,Pruning,Downy_mildew_susceptibility,
+                Annual_costs_total_fungicides,	Active_ingredients_total_fungicides,	
+                Annual_costs_for_downy_only,	Active_ingredients_for_downy_only,	
+                Annual_costs_for_powdery_only,	Active_ingredients_for_powdery_only,	
+                Annual_costs_for_both,	Active_ingredients_for_both,	
+                Annual_costs_for_powdery_only_both,	Active_ingredients_for_powdery_only_both,
+                Disease_incidence_April,  Disease_incidence_May,
+                Disease_incidence_June,Disease_incidence_July,Disease_incidence) ~ Group_type_active, data = df_EDA, sd)
+
+# ANoVA
+ANOVA_Susceptibility_to_R6_Strains <- aov(Susceptibility_to_R6_Strains ~ Group_type_active, data = df_EDA)
+ANOVA_Susceptibility_to_non_R6_Strains <- aov(Susceptibility_to_non_R6_Strains ~ Group_type_active, data = df_EDA)
+ANOVA_Initial_strain <- aov(Initial_strain ~ Group_type_active, data = df_EDA)
+ANOVA_Pruning <- aov(Pruning ~ Group_type_active, data = df_EDA)
+ANOVA_Downy_mildew_susceptibility <- aov(Downy_mildew_susceptibility ~ Group_type_active, data = df_EDA)
+ANOVA_Annual_costs_total_fungicides <- aov(Annual_costs_total_fungicides ~ Group_type_active, data = df_EDA)
+ANOVA_Active_ingredients_total_fungicides <- aov(Active_ingredients_total_fungicides ~ Group_type_active, data = df_EDA)
+ANOVA_Annual_costs_for_downy_only <- aov(Annual_costs_for_downy_only ~ Group_type_active, data = df_EDA)
+ANOVA_Active_ingredients_for_downy_only <- aov(Active_ingredients_for_downy_only ~ Group_type_active, data = df_EDA)
+ANOVA_Annual_costs_for_powdery_only <- aov(Annual_costs_for_powdery_only ~ Group_type_active, data = df_EDA)
+ANOVA_Active_ingredients_for_powdery_only <- aov(Active_ingredients_for_powdery_only ~ Group_type_active, data = df_EDA)
+ANOVA_Annual_costs_for_both <- aov(Annual_costs_for_both ~ Group_type_active, data = df_EDA)
+ANOVA_Active_ingredients_for_both <- aov(Active_ingredients_for_both ~ Group_type_active, data = df_EDA)
+ANOVA_Annual_costs_for_powdery_only_both <- aov(Annual_costs_for_powdery_only_both ~ Group_type_active, data = df_EDA)
+ANOVA_Active_ingredients_for_powdery_only_both <- aov(Active_ingredients_for_powdery_only_both ~ Group_type_active, data = df_EDA)
+ANOVA_Disease_incidence_April <- aov(Disease_incidence_April ~ Group_type_active, data = df_EDA)
+ANOVA_Disease_incidence_May <- aov(Disease_incidence_May ~ Group_type_active, data = df_EDA)
+ANOVA_Disease_incidence_June <- aov(Disease_incidence_June ~ Group_type_active, data = df_EDA)
+ANOVA_Disease_incidence_July <- aov(Disease_incidence_July ~ Group_type_active, data = df_EDA)
+ANOVA_Disease_incidence <- aov(Disease_incidence ~ Group_type_active, data = df_EDA)
+
+
+summary(ANOVA_Susceptibility_to_R6_Strains)
+summary(ANOVA_Susceptibility_to_non_R6_Strains)
+summary(ANOVA_Initial_strain)
+summary(ANOVA_Pruning)
+summary(ANOVA_Downy_mildew_susceptibility)
+summary(ANOVA_Annual_costs_total_fungicides)
+summary(ANOVA_Active_ingredients_total_fungicides)
+summary(ANOVA_Annual_costs_for_downy_only)
+summary(ANOVA_Active_ingredients_for_downy_only)
+summary(ANOVA_Annual_costs_for_powdery_only)
+summary(ANOVA_Active_ingredients_for_powdery_only)
+summary(ANOVA_Annual_costs_for_both)
+summary(ANOVA_Active_ingredients_for_both)
+summary(ANOVA_Annual_costs_for_powdery_only_both)
+summary(ANOVA_Active_ingredients_for_powdery_only_both)
+summary(ANOVA_Disease_incidence_April)
+summary(ANOVA_Disease_incidence_May)
+summary(ANOVA_Disease_incidence_June)
+summary(ANOVA_Disease_incidence_July)
+summary(ANOVA_Disease_incidence)
+
+
+library(corrplot)
+
+df_EDA_corr <- subset(df_EDA, select=c('Annual_costs_for_powdery_only_both',	'Active_ingredients_for_powdery_only_both',
+                                       'Annual_costs_total_fungicides',	'Active_ingredients_total_fungicides',	
+                                       'Annual_costs_for_downy_only',	'Active_ingredients_for_downy_only',	
+                                       'Annual_costs_for_powdery_only',	'Active_ingredients_for_powdery_only',	
+                                       'Annual_costs_for_both',	'Active_ingredients_for_both',	
+                                       'Susceptibility_to_R6_Strains','Susceptibility_to_non_R6_Strains',
+                                            'Initial_strain','Pruning',
+                                            'Downy_mildew_susceptibility','QuadrantNE','QuadrantNW','QuadrantSE','QuadrantSW',
+                                            'Disease_incidence','Disease_incidence_April',
+                                            'Disease_incidence_May','Disease_incidence_June',
+                                            'Disease_incidence_July'))
+
+names(df_EDA_corr)[names(df_EDA_corr) == "Disease_incidence"] <- "Seasonal powdery mildew incidence"
+names(df_EDA_corr)[names(df_EDA_corr) == "Disease_incidence_April"] <- "Powdery mildew incidence April"
+names(df_EDA_corr)[names(df_EDA_corr) == "Disease_incidence_May"] <- "Powdery mildew incidence May"
+names(df_EDA_corr)[names(df_EDA_corr) == "Disease_incidence_June"] <- "Powdery mildew incidence June"
+names(df_EDA_corr)[names(df_EDA_corr) == "Disease_incidence_July"] <- "Powdery mildew incidence July"
+names(df_EDA_corr)[names(df_EDA_corr) == "Annual_costs_total_fungicides"] <- "Annual costs total fungicides"
+names(df_EDA_corr)[names(df_EDA_corr) == "Active_ingredients_total_fungicides"] <- "Active ingredients total fungicides"
+names(df_EDA_corr)[names(df_EDA_corr) == "Annual_costs_for_downy_only"] <- "Annual costs for downy only"
+names(df_EDA_corr)[names(df_EDA_corr) == "Active_ingredients_for_downy_only"] <- "Active ingredients for downy only"
+names(df_EDA_corr)[names(df_EDA_corr) == "Annual_costs_for_powdery_only"] <- "Annual costs for powdery only"
+names(df_EDA_corr)[names(df_EDA_corr) == "Active_ingredients_for_powdery_only"] <- "Active ingredients for powdery only"
+names(df_EDA_corr)[names(df_EDA_corr) == "Annual_costs_for_both"] <- "Annual costs for both"
+names(df_EDA_corr)[names(df_EDA_corr) == "Active_ingredients_for_both"] <- "Active ingredients for both"
+names(df_EDA_corr)[names(df_EDA_corr) == "Annual_costs_for_powdery_only_both"] <- "Annual costs for powdery only + both"
+names(df_EDA_corr)[names(df_EDA_corr) == "Active_ingredients_for_powdery_only_both"] <- "Active ingredients for powdery only +  both"
+names(df_EDA_corr)[names(df_EDA_corr) == "Susceptibility_to_R6_Strains"] <- "Susceptibility to V6 Strains"
+names(df_EDA_corr)[names(df_EDA_corr) == "Susceptibility_to_non_R6_Strains"] <- "Susceptibility to non-V6 Strains"
+names(df_EDA_corr)[names(df_EDA_corr) == "Initial_strain"] <- "Initial strain"
+names(df_EDA_corr)[names(df_EDA_corr) == "Downy_mildew_susceptibility"] <- "Downy mildew susceptibility"
+names(df_EDA_corr)[names(df_EDA_corr) == "QuadrantNE"] <- "Quadrant NE"
+names(df_EDA_corr)[names(df_EDA_corr) == "QuadrantNW"] <- "Quadrant NW"
+names(df_EDA_corr)[names(df_EDA_corr) == "QuadrantSE"] <- "Quadrant SE"
+names(df_EDA_corr)[names(df_EDA_corr) == "QuadrantSW"] <- "Quadrant SW"
+
+# Supplementary Figure 1
+png(file = "SpearmanCorr1.png", width=4500, height=4500, res=300)
+corrplot(round(cor(df_EDA_corr, method="s"), 2),        # Correlation matrix
+         method = "number", # Correlation plot method
+         type = "lower",    # Correlation plot style (also "upper" and "lower")
+         diag = FALSE,      # If TRUE (default), adds the diagonal
+         tl.col = "black", # Labels color
+         bg = "black",     # Background color
+         title = "",       # Main title
+         col = NULL)       # Color palette
+dev.off()
+
+
+# Beeswarm plot
+library(ggbeeswarm)
+
+df_fun_her$Annual_costs_for_powdery_only <- as.numeric(df_fun_her$Annual_costs_for_powdery_only)
+df_fun_her$Active_ingredients_for_powdery_only <- as.numeric(df_fun_her$Active_ingredients_for_powdery_only)
+
+
+# Figure 3
+png("swarm_costs_powdery.png",width=15,height=12,units="cm" , res = 1000)
+ggplot(df_fun_her, aes(x = Group_type_active, y = Annual_costs_for_powdery_only)) +
+  # Boxplots with elevation-based fill color
+  geom_boxplot(aes(group = Group_type_active), color = "black", outlier.shape = NA, alpha = 0.5) +
+  # Scatter plot (points only) with jitter
+  geom_jitter(aes(color = Downy_mildew_susceptibility), position = position_jitter(width = 0.2), 
+              size = 2, alpha = 0.8) + theme_classic() + theme(legend.position = "none") +
+  labs(x = "Group",
+       y = "Annual costs for powdery only") # + geom_quasirandom(dodge.width=1)
+dev.off()
+
+
+png("swarm_active_powdery.png",width=15,height=12,units="cm" , res = 1000)
+ggplot(df_fun_her, aes(x = Group_type_active, y = Active_ingredients_for_powdery_only)) +
+  # Boxplots with elevation-based fill color
+  geom_boxplot(aes(group = Group_type_active), color = "black", outlier.shape = NA, alpha = 0.5) +
+  # Scatter plot (points only) with jitter
+  geom_jitter(aes(color = Downy_mildew_susceptibility), position = position_jitter(width = 0.2), 
+              size = 2, alpha = 0.8) + theme_classic() + theme(legend.position = "none") +
+  labs(x = "Group",
+       y = "Active ingredients for powdery only") # + geom_quasirandom(dodge.width=1)
+dev.off()
