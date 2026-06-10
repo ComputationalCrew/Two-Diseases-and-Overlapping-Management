@@ -20,9 +20,23 @@ library(caret)
 
 SEED=123
 
+# Table 4. Descriptive
+library(readr)
+library(ggplot2)
+library(stargazer) #We have to library the package every time we use
+library(corrplot)
 
-# Upload the data
+# Read the dataset and convert the target variable to a factor
 MLR_SB <- read.csv(".../downy_mildew_fungicide_record_database_SB_V10_Multinomial.csv", check.names=FALSE)
+
+# Table 1. Descriptive Statistics
+stargazer(MLR_SB, type = "text", title="Descriptive statistics", digits=2, out="table1.txt")
+
+levels(factor(MLR_SB$group))
+
+library(vtable)
+st(MLR_SB, group = 'group', group.test = TRUE)
+st(MLR_SB, group = 'group', group.long = TRUE)
 
 
 for (i in 1:12) {
@@ -162,3 +176,22 @@ p + theme(text = element_text(size = 40)) + theme(legend.position="top") + labs(
 ggsave('multi_model_D_prob_first.spray.date.jpg', dpi = 1000, height = 12, width = 15, unit = 'in')
 
 
+# Figure 9. Distribution by changing type of program
+
+BLR_SB <- read.csv(".../downy_mildew_fungicide_record_database_SB_V9_Working.csv", check.names=FALSE)
+
+# Create frequency bar plot in descending order
+png(file = "FrequencyBarPlot.png", width=2500, height=1500, res=300)
+ggplot(BLR_SB, aes(x = fct_infreq(how))) +  # Order by frequency
+  geom_bar(fill = "#1b98e0") +
+  labs(
+    title = "",
+    x = "Type of program",
+    y = "Frequency"
+  ) + geom_text(
+    stat = "count",                # Use counts from geom_bar
+    aes(label = ..count..),        # Label with counts
+    vjust = -0.5,                  # Position above bars
+    size = 3) + 
+  theme_classic()
+dev.off()
